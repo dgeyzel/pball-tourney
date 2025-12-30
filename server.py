@@ -156,6 +156,7 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
             </div>
             
             <div class="nav-links">
+                <a href="/index">Overview</a>
                 <a href="/settings">Settings</a>
                 <a href="/players">Players</a>
                 <a href="/teams">Teams</a>
@@ -190,10 +191,12 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
             <h1>Tournament Settings</h1>
             
             <div class="nav-links">
-                <a href="/">Home</a>
+                <a href="/index">Overview</a>
+                <a href="/settings">Settings</a>
                 <a href="/players">Players</a>
                 <a href="/teams">Teams</a>
                 <a href="/matches">Matches</a>
+                <a href="/standings">Standings</a>
             </div>
             
             <div class="card">
@@ -238,12 +241,14 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
         html = self.get_base_html("Players", f"""
         <div class="container">
             <h1>Players</h1>
-            
+                        
             <div class="nav-links">
-                <a href="/">Home</a>
+                <a href="/index">Overview</a>
                 <a href="/settings">Settings</a>
+                <a href="/players">Players</a>
                 <a href="/teams">Teams</a>
                 <a href="/matches">Matches</a>
+                <a href="/standings">Standings</a>
             </div>
             
             <div class="card">
@@ -313,11 +318,14 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
         html = self.get_base_html("Teams", f"""
         <div class="container">
             <h1>Teams</h1>
-            
+                        
             <div class="nav-links">
-                <a href="/">Home</a>
+                <a href="/index">Overview</a>
+                <a href="/settings">Settings</a>
                 <a href="/players">Players</a>
+                <a href="/teams">Teams</a>
                 <a href="/matches">Matches</a>
+                <a href="/standings">Standings</a>
             </div>
             
             <div class="card">
@@ -455,9 +463,13 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
         html = self.get_base_html("Matches", f"""
         <div class="container">
             <h1>Matches</h1>
-            
+                       
             <div class="nav-links">
-                <a href="/">Home</a>
+                <a href="/index">Overview</a>
+                <a href="/settings">Settings</a>
+                <a href="/players">Players</a>
+                <a href="/teams">Teams</a>
+                <a href="/matches">Matches</a>
                 <a href="/standings">Standings</a>
             </div>
             
@@ -502,8 +514,12 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
             <h1>Tournament Standings</h1>
             
             <div class="nav-links">
-                <a href="/">Home</a>
+                <a href="/index">Overview</a>
+                <a href="/settings">Settings</a>
+                <a href="/players">Players</a>
+                <a href="/teams">Teams</a>
                 <a href="/matches">Matches</a>
+                <a href="/standings">Standings</a>
             </div>
             
             <div class="card">
