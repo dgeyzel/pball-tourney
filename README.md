@@ -15,7 +15,8 @@ A web-based tournament management application for organizing and tracking pickle
 ## Requirements
 
 - Python 3.6 or higher
-- No external dependencies required (uses only Python standard library)
+- No external dependencies required for running the application (uses only Python standard library)
+- pytest (for running tests, see Testing section)
 
 ## Installation
 
@@ -103,11 +104,18 @@ pball-tourney/
 ├── server.py          # HTTP server and web interface
 ├── tournament.py      # Tournament logic (scheduling, standings)
 ├── storage.py         # Data persistence (JSON file operations)
+├── tests/             # Test suite
+│   ├── __init__.py    # Test package initialization
+│   ├── conftest.py    # Pytest fixtures and configuration
+│   ├── test_storage.py    # Storage module tests
+│   ├── test_tournament.py # Tournament logic tests
+│   └── test_server.py     # HTTP server integration tests
 ├── data/              # Data storage directory
 │   ├── players.json   # Player data
 │   ├── teams.json     # Team data
 │   ├── matches.json   # Match data
 │   └── tournament.json # Tournament state and settings
+├── requirements.txt   # Python dependencies (pytest)
 └── README.md          # This file
 ```
 
@@ -127,6 +135,73 @@ The data directory is created automatically if it doesn't exist. You can back up
 - **Court Capacity**: Matches are distributed across rounds so that no more than the configured number of courts are used simultaneously
 - **Bye Handling**: If there's an odd number of teams, bye rounds are automatically assigned
 - **Standings**: Teams are ranked by wins, then point differential, then total wins
+
+## Testing
+
+The project includes a comprehensive test suite using pytest. All tests are located in the `tests/` directory.
+
+### Installing Test Dependencies
+
+To run the tests, you'll need to install pytest:
+
+```bash
+pip install pytest
+```
+
+Or install from the requirements file:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Running Tests
+
+Run all tests:
+
+```bash
+pytest
+```
+
+Or specify the tests directory explicitly:
+
+```bash
+pytest tests/
+```
+
+Run tests with verbose output:
+
+```bash
+pytest -v
+```
+
+Run a specific test file:
+
+```bash
+pytest tests/test_storage.py
+```
+
+Run a specific test function:
+
+```bash
+pytest tests/test_storage.py::test_add_player
+```
+
+Run tests with coverage report:
+
+```bash
+pytest --cov=. --cov-report=html
+```
+
+This will generate an HTML coverage report in the `htmlcov/` directory.
+
+### Test Structure
+
+- **`tests/test_storage.py`**: Unit tests for storage operations (CRUD, file I/O)
+- **`tests/test_tournament.py`**: Unit tests for tournament logic (scheduling, standings, match updates)
+- **`tests/test_server.py`**: Integration tests for HTTP endpoints (GET/POST requests)
+- **`tests/conftest.py`**: Shared pytest fixtures and configuration
+
+All tests use isolated temporary directories to avoid affecting production data.
 
 ## Troubleshooting
 
