@@ -1,4 +1,9 @@
-"""HTTP server for pickleball tournament webapp using Python's built-in http.server."""
+"""HTTP server for pickleball tournament webapp using Python's built-in http.server.
+
+This module implements a simple web server that serves HTML pages for managing
+a pickleball tournament. It handles both GET requests (displaying pages) and
+POST requests (processing form submissions).
+"""
 import http.server
 import socketserver
 import urllib.parse
@@ -7,94 +12,137 @@ from pathlib import Path
 import storage
 import tournament
 
+# Default port for the web server
 DEFAULT_PORT = 8000
 
 class TournamentHandler(http.server.SimpleHTTPRequestHandler):
-    """Custom request handler for tournament webapp."""
+    """Custom HTTP request handler for the tournament webapp.
+    
+    This class handles all incoming HTTP requests and routes them to the
+    appropriate page handler or action handler.
+    """
     
     def do_GET(self):
-        """Handle GET requests."""
+        """Handle GET requests - display pages to the user.
+        
+        Routes different URL paths to their corresponding page handlers.
+        """
+        # Parse the URL to get the path component
         parsed_path = urllib.parse.urlparse(self.path)
         path = parsed_path.path
         
+        # Route to appropriate page handler based on path
         if path == '/' or path == '/index':
-            self.serve_index()
+            self.serve_index()          # Main tournament overview page
         elif path == '/settings':
-            self.serve_settings()
+            self.serve_settings()      # Tournament settings page
         elif path == '/players':
-            self.serve_players()
+            self.serve_players()        # Player management page
         elif path == '/teams':
-            self.serve_teams()
+            self.serve_teams()          # Team management page
         elif path == '/matches':
-            self.serve_matches()
+            self.serve_matches()        # Match schedule and results page
         elif path == '/standings':
-            self.serve_standings()
+            self.serve_standings()      # Tournament standings page
         else:
+            # Unknown path - return 404 error
             self.send_error(404, "Page not found")
     
     def do_POST(self):
-        """Handle POST requests."""
+        """Handle POST requests - process form submissions.
+        
+        Reads form data from the request, performs the requested action,
+        and redirects the user to the appropriate page.
+        """
+        # Parse the URL to get the path component
         parsed_path = urllib.parse.urlparse(self.path)
         path = parsed_path.path
         
-        # Read POST data
+        # Read POST data from the request body
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length).decode('utf-8')
+        # Parse form data (application/x-www-form-urlencoded format)
         post_params = urllib.parse.parse_qs(post_data)
         
+        # Route to appropriate action handler based on path
         if path == '/add_player':
+            # Add a new player to the tournament
             name = post_params.get('name', [''])[0]
             if name:
                 storage.add_player(name)
             self.send_redirect('/players')
+            
         elif path == '/remove_player':
+            # Remove a player from the tournament
             player_id = int(post_params.get('player_id', ['0'])[0])
             if player_id:
                 storage.remove_player(player_id)
             self.send_redirect('/players')
+            
         elif path == '/add_team':
+            # Create a new team by pairing two players
             player1_id = int(post_params.get('player1', ['0'])[0])
             player2_id = int(post_params.get('player2', ['0'])[0])
+            # Validate: both players must be selected and different
             if player1_id and player2_id and player1_id != player2_id:
                 storage.add_team(player1_id, player2_id)
             self.send_redirect('/teams')
+            
         elif path == '/remove_team':
+            # Remove a team from the tournament
             team_id = int(post_params.get('team_id', ['0'])[0])
             if team_id:
                 storage.remove_team(team_id)
             self.send_redirect('/teams')
+            
         elif path == '/update_settings':
+            # Update tournament settings (number of courts)
             num_courts = int(post_params.get('num_courts', ['1'])[0])
             if num_courts > 0:
                 storage.update_tournament_settings(num_courts)
             self.send_redirect('/settings')
+            
         elif path == '/generate_schedule':
+            # Generate the round-robin tournament schedule
             tournament.generate_round_robin_schedule()
             self.send_redirect('/matches')
+            
         elif path == '/update_match':
+            # Update match result with scores
             match_id = int(post_params.get('match_id', ['0'])[0])
+            # Parse scores (handle empty strings as None)
             score1 = int(post_params.get('score1', ['0'])[0]) if post_params.get('score1', [''])[0] else None
             score2 = int(post_params.get('score2', ['0'])[0]) if post_params.get('score2', [''])[0] else None
+            # Validate: match ID and both scores must be provided
             if match_id and score1 is not None and score2 is not None:
                 tournament.update_match_result(match_id, score1, score2)
             self.send_redirect('/matches')
         else:
+            # Unknown path - return 404 error
             self.send_error(404, "Page not found")
     
     def send_redirect(self, location):
-        """Send HTTP redirect response."""
-        self.send_response(302)
+        """Send HTTP 302 redirect response to the specified location.
+        
+        Args:
+            location: URL path to redirect to (e.g., '/players')
+        """
+        self.send_response(302)  # HTTP 302 Found (temporary redirect)
         self.send_header('Location', location)
         self.end_headers()
     
     def serve_index(self):
-        """Serve the main tournament overview page."""
+        """Serve the main tournament overview page.
+        
+        Displays tournament status, current standings (top 5), and upcoming matches.
+        """
+        # Load tournament data
         tournament_state = storage.get_tournament()
         standings = tournament.calculate_standings()
         matches = storage.get_matches()
         current_round = tournament_state.get("current_round", 0)
         
-        # Get upcoming matches (scheduled matches from current round)
+        # Get upcoming matches (scheduled matches from current round, limit to 5)
         upcoming_matches = [m for m in matches if m["round"] == current_round and m["status"] == "scheduled"][:5]
         
         html = self.get_base_html("Tournament Overview", f"""
@@ -164,9 +212,15 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
         self.send_html(html)
     
     def serve_players(self):
-        """Serve the players management page."""
+        """Serve the players management page.
+        
+        Displays a form to add new players and a table of all registered players
+        with options to remove them.
+        """
+        # Get all registered players
         players = storage.get_players()
         
+        # Build HTML table rows for each player
         players_list = ""
         for player in players:
             players_list += f"""
@@ -222,19 +276,27 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
         self.send_html(html)
     
     def serve_teams(self):
-        """Serve the teams management page."""
+        """Serve the teams management page.
+        
+        Displays a form to create teams by selecting two players, a table of
+        all registered teams, and a button to generate the schedule (if 2+ teams exist).
+        """
+        # Get all players and teams
         players = storage.get_players()
         teams = storage.get_teams()
         
-        # Build player options for dropdowns
+        # Build HTML option elements for player dropdowns
         player_options = ""
         for player in players:
             player_options += f'<option value="{player["id"]}">{player["name"]}</option>'
         
+        # Build HTML table rows for each team
         teams_list = ""
         for team in teams:
+            # Look up player names for this team
             player1 = next((p for p in players if p["id"] == team["player1"]), None)
             player2 = next((p for p in players if p["id"] == team["player2"]), None)
+            # Format team name as "Player1 & Player2"
             team_name = f"{player1['name']} & {player2['name']}" if player1 and player2 else "Unknown"
             teams_list += f"""
             <tr>
@@ -300,13 +362,20 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
         self.send_html(html)
     
     def serve_matches(self):
-        """Serve the matches page."""
+        """Serve the matches page.
+        
+        Displays all matches organized by round. Shows different UI for:
+        - Scheduled matches: form to enter scores
+        - Completed matches: scores and winner indicator
+        - Bye matches: special display for bye rounds
+        """
+        # Load tournament data
         matches = storage.get_matches()
         teams = storage.get_teams()
         players = storage.get_players()
         tournament_state = storage.get_tournament()
         
-        # Group matches by round
+        # Group matches by round number for organized display
         rounds = {}
         for match in matches:
             round_num = match["round"]
@@ -314,16 +383,21 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
                 rounds[round_num] = []
             rounds[round_num].append(match)
         
+        # Build HTML for each round
         rounds_html = ""
         for round_num in sorted(rounds.keys()):
             round_matches = rounds[round_num]
             matches_html = ""
             
+            # Build HTML for each match in this round
             for match in round_matches:
+                # Get team names (or "Bye" if no opponent)
                 team1_name = tournament.get_team_name(match["team1"]) if match["team1"] else "Bye"
                 team2_name = tournament.get_team_name(match["team2"]) if match["team2"] else "Bye"
                 
+                # Display different UI based on match status
                 if match["status"] == "bye":
+                    # Bye match - special display
                     matches_html += f"""
                     <tr class="bye-match">
                         <td>{team1_name}</td>
@@ -332,6 +406,7 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
                     </tr>
                     """
                 elif match["status"] == "completed":
+                    # Completed match - show scores and winner indicator (★)
                     winner_indicator = "★" if match["winner"] == match["team1"] else ""
                     winner_indicator2 = "★" if match["winner"] == match["team2"] else ""
                     matches_html += f"""
@@ -342,6 +417,7 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
                     </tr>
                     """
                 else:
+                    # Scheduled match - show form to enter scores
                     matches_html += f"""
                     <tr class="scheduled-match">
                         <td>{team1_name}</td>
@@ -391,14 +467,22 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
         self.send_html(html)
     
     def serve_standings(self):
-        """Serve the standings page."""
+        """Serve the standings page.
+        
+        Displays a table of all teams ranked by their tournament performance,
+        showing wins, losses, points, and point differentials.
+        """
+        # Calculate current standings (already sorted by rank)
         standings = tournament.calculate_standings()
         teams = storage.get_teams()
         
+        # Build HTML table rows for standings
         standings_html = ""
         rank = 1
         for standing in standings:
+            # Get formatted team name
             team_name = tournament.get_team_name(standing["team_id"])
+            # Format point differential with + or - sign
             standings_html += f"""
             <tr>
                 <td>{rank}</td>
@@ -446,10 +530,21 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
         self.send_html(html)
     
     def render_standings_table(self, standings):
-        """Render a standings table for a subset of teams."""
+        """Render a compact standings table for a subset of teams.
+        
+        Used on the index page to show top teams. Displays abbreviated
+        statistics (wins, losses, points only).
+        
+        Args:
+            standings: List of standing dictionaries (can be a subset)
+        
+        Returns:
+            HTML string containing the standings table
+        """
         if not standings:
             return "<p>No standings yet.</p>"
         
+        # Build compact table with abbreviated headers
         html = "<table class='data-table'><thead><tr><th>Team</th><th>W</th><th>L</th><th>Pts</th></tr></thead><tbody>"
         for standing in standings:
             team_name = tournament.get_team_name(standing["team_id"])
@@ -458,10 +553,20 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
         return html
     
     def render_matches_list(self, matches):
-        """Render a list of matches."""
+        """Render a simple list of matches.
+        
+        Used on the index page to show upcoming matches in a simple format.
+        
+        Args:
+            matches: List of match dictionaries
+        
+        Returns:
+            HTML string containing the matches list
+        """
         if not matches:
             return "<p>No upcoming matches.</p>"
         
+        # Build unordered list of matches
         html = "<ul class='matches-list'>"
         for match in matches:
             team1_name = tournament.get_team_name(match["team1"])
@@ -471,7 +576,20 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
         return html
     
     def get_base_html(self, title, content):
-        """Get base HTML template with embedded CSS."""
+        """Generate base HTML template with embedded CSS.
+        
+        Creates a complete HTML page with:
+        - Page title
+        - Embedded CSS styles for the entire application
+        - The provided content inserted into the body
+        
+        Args:
+            title: Page title to display in browser tab
+            content: HTML content to insert into the page body
+        
+        Returns:
+            Complete HTML document as a string
+        """
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -702,14 +820,23 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
 </html>"""
     
     def send_html(self, html):
-        """Send HTML response."""
-        self.send_response(200)
+        """Send an HTML response to the client.
+        
+        Args:
+            html: HTML content to send as a string
+        """
+        self.send_response(200)  # HTTP 200 OK
         self.send_header('Content-type', 'text/html; charset=utf-8')
         self.end_headers()
+        # Write HTML content as UTF-8 encoded bytes
         self.wfile.write(html.encode('utf-8'))
 
 def main():
-    """Start the HTTP server."""
+    """Start the HTTP server and begin serving requests.
+    
+    Handles port selection from command line arguments or uses default.
+    Automatically tries next available port if the requested port is in use.
+    """
     # Get port from command line argument or use default
     port = DEFAULT_PORT
     if len(sys.argv) > 1:
@@ -723,25 +850,31 @@ def main():
     max_attempts = 10
     for attempt in range(max_attempts):
         try:
+            # Create TCP server listening on all interfaces ("") at the specified port
             with socketserver.TCPServer(("", port), TournamentHandler) as httpd:
                 print(f"Server running at http://localhost:{port}/")
                 print("Press Ctrl+C to stop the server")
                 try:
+                    # Start serving requests (blocks until interrupted)
                     httpd.serve_forever()
                 except KeyboardInterrupt:
+                    # User pressed Ctrl+C - stop the server gracefully
                     print("\nServer stopped.")
                 return
         except OSError as e:
+            # Port is already in use - try next port
             if e.winerror == 10048 or "Address already in use" in str(e):
                 if attempt < max_attempts - 1:
                     print(f"Port {port} is already in use. Trying port {port + 1}...")
                     port += 1
                 else:
+                    # Couldn't find an available port after max attempts
                     print(f"Could not find an available port after {max_attempts} attempts.")
                     print("Please close the application using port 8000 or specify a different port:")
                     print(f"  python server.py <port_number>")
                     sys.exit(1)
             else:
+                # Some other error occurred - re-raise it
                 raise
 
 if __name__ == "__main__":
