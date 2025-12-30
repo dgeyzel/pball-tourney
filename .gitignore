@@ -51,4 +51,18 @@ docs/_build/
 
 # Tournament data
 data/*
-   
+
+# Virtual environment
+pball-tourney/Scripts/activate
+pball-tourney/Scripts/activate.bat
+pball-tourney/Scripts/Activate.ps1
+pball-tourney/Scripts/deactivate.bat
+pball-tourney/Scripts/pip.exe
+pball-tourney/Scripts/pip3.10.exe
+pball-tourney/Scripts/pip3.exe
+pball-tourney/Scripts/py.test.exe
+pball-tourney/Scripts/pygmentize.exe
+pball-tourney/Scripts/pytest.exe
+pball-tourney/Scripts/python.exe
+pball-tourney/Scripts/pythonw.exe
+pball-tourney/pyvenv.cfg
