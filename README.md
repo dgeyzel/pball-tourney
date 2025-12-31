@@ -186,14 +186,6 @@ Run a specific test function:
 pytest tests/test_storage.py::test_add_player
 ```
 
-Run tests with coverage report:
-
-```bash
-pytest --cov=. --cov-report=html
-```
-
-This will generate an HTML coverage report in the `htmlcov/` directory.
-
 ### Test Structure
 
 - **`tests/test_storage.py`**: Unit tests for storage operations (CRUD, file I/O)
