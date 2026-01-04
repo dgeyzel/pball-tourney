@@ -2,6 +2,8 @@
 
 A web-based tournament management application for organizing and tracking pickleball tournaments. This application provides a simple, intuitive interface for managing players, teams, matches, and standings in a round-robin tournament format.
 
+One of the reasons to create this app was for me to learn about and practice using LLM tools to create code.  This application and the accompanying tests were written using Cursor with some human-created tweaks and bug-fixes.
+
 ## Features
 
 - **Player Management**: Add and remove players from the tournament
@@ -27,17 +29,26 @@ A web-based tournament management application for organizing and tracking pickle
 
 1. Open a terminal/command prompt in the project directory
 2. Run the server:
+
    ```bash
-   python server.py
+   python run_server.py
    ```
-   
-   Or specify a custom port:
+
+   Or use the module directly:
+
    ```bash
-   python server.py 8080
+   python -m src.server
+   ```
+
+   To specify a custom port:
+
+   ```bash
+   python run_server.py 8080
    ```
 
 3. The server will start and display a message like:
-   ```
+
+   ```text
    Server running at http://localhost:8000/
    Press Ctrl+C to stop the server
    ```
@@ -99,11 +110,12 @@ A web-based tournament management application for organizing and tracking pickle
 
 ## Project Structure
 
-```
+```text
 pball-tourney/
-├── server.py          # HTTP server and web interface
-├── tournament.py      # Tournament logic (scheduling, standings)
-├── storage.py         # Data persistence (JSON file operations)
+├── src/               # Source code directory
+│   ├── server.py      # HTTP server and web interface
+│   ├── tournament.py  # Tournament logic (scheduling, standings)
+│   └── storage.py     # Data persistence (JSON file operations)
 ├── tests/             # Test suite
 │   ├── __init__.py    # Test package initialization
 │   ├── conftest.py    # Pytest fixtures and configuration
@@ -122,6 +134,7 @@ pball-tourney/
 ## Data Storage
 
 All tournament data is stored in JSON files in the `data/` directory:
+
 - **players.json**: List of all registered players
 - **teams.json**: List of all teams (player pairings)
 - **matches.json**: All match records with scores and results
@@ -204,4 +217,3 @@ All tests use isolated temporary directories to avoid affecting production data.
 ## License
 
 This project is provided as-is for personal or educational use.
-
