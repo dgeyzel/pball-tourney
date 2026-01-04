@@ -49,9 +49,9 @@ def load_json(filename, default):
                 return json.load(f)
         except (json.JSONDecodeError, IOError):
             # If file is corrupted or can't be read, return default value
-            return default
+            return default.copy() if hasattr(default, 'copy') else default
     # File doesn't exist, return default value
-    return default
+    return default.copy() if hasattr(default, 'copy') else default
 
 
 def save_json(filename, data):

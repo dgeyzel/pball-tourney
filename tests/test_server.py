@@ -23,8 +23,16 @@ class ResponseTracker:
 def create_handler(path, method='GET', post_data=None):
     """Helper function to create a handler instance for testing."""
     # Create minimal mock objects needed for handler initialization
+    # PATCH: Provide a valid HTTP request line for the handler to parse
+    # The request line must be bytes, e.g. b"GET / HTTP/1.1\r\n"
+    http_method = method.upper() if method else 'GET'
+    http_path = path if path else '/'
+    request_line_bytes = f"{http_method} {http_path} HTTP/1.1\r\n".encode("iso-8859-1")
     mock_request = MagicMock()
     mock_server = MagicMock()
+    # Make the mock_request object provide a BytesIO of the HTTP request line, as expected by the handler.
+    request_bytesio = BytesIO(request_line_bytes)
+    mock_request.makefile.return_value = request_bytesio
 
     # Create handler
     handler = server.TournamentHandler(mock_request,
@@ -33,6 +41,7 @@ def create_handler(path, method='GET', post_data=None):
     # Set up handler attributes
     handler.path = path
     handler.headers = {}
+    handler.raw_requestline = request_line_bytes
 
     if post_data:
         post_bytes = urllib.parse.urlencode(post_data).encode('utf-8')
@@ -52,9 +61,11 @@ def create_handler(path, method='GET', post_data=None):
     original_send_response = handler.send_response
     original_send_header = handler.send_header
 
-    def track_send_response(code):
-        response.status_code = code
-        original_send_response(code)
+    def track_send_response(*args, **kwargs):
+        # First arg is always the code
+        if args:
+            response.status_code = args[0]
+        original_send_response(*args, **kwargs)
 
     def track_send_header(key, value):
         response.headers[key] = value
@@ -249,7 +260,7 @@ class TestPOSTEndpoints:
         """Test that POST to add_player actually creates a player."""
         players_before = len(storage.get_players())
 
-        handler, response = create_handler('', '',)
+        handler, response = create_handler('/add_player', 'POST', {'name': 'New Player'})
         handler.send_redirect = lambda x: None
         handler.do_POST()
 
@@ -259,7 +270,7 @@ class TestPOSTEndpoints:
 
     def test_remove_player_redirects(self, setup_test_data):
         """Test that removing a player redirects to players page."""
-        handler, response = create_handler('', '',)
+        handler, response = create_handler('/remove_player', 'POST', {'player_id': '1'})
 
         redirect_location = []
 
@@ -276,7 +287,7 @@ class TestPOSTEndpoints:
         players_before = storage.get_players()
         player_count_before = len(players_before)
 
-        handler, response = create_handler('', '',)
+        handler, response = create_handler('/remove_player', 'POST', {'player_id': '1'})
         handler.send_redirect = lambda x: None
         handler.do_POST()
 
@@ -286,7 +297,7 @@ class TestPOSTEndpoints:
 
     def test_add_team_redirects(self, setup_test_data):
         """Test that adding a team redirects to teams page."""
-        handler, response = create_handler('', '',)
+        handler, response = create_handler('/add_team', 'POST', {'player1': '1', 'player2': '3'})
 
         redirect_location = []
 
@@ -303,7 +314,7 @@ class TestPOSTEndpoints:
         """Test that POST to add_team actually creates a team."""
         teams_before = len(storage.get_teams())
 
-        handler, response = create_handler('', '',)
+        handler, response = create_handler('/add_team', 'POST', {'player1': '6', 'player2': '7'})
         handler.send_redirect = lambda x: None
         handler.do_POST()
 
@@ -324,7 +335,7 @@ class TestPOSTEndpoints:
 
     def test_remove_team_redirects(self, setup_test_data):
         """Test that removing a team redirects to teams page."""
-        handler, response = create_handler('', '',)
+        handler, response = create_handler('/remove_team', 'POST', {'team_id': '1'})
 
         redirect_location = []
 
@@ -341,7 +352,7 @@ class TestPOSTEndpoints:
         teams_before = storage.get_teams()
         team_count_before = len(teams_before)
 
-        handler, response = create_handler('', '',)
+        handler, response = create_handler('/remove_team', 'POST', {'team_id': '1'})
         handler.send_redirect = lambda x: None
         handler.do_POST()
 
@@ -351,7 +362,7 @@ class TestPOSTEndpoints:
 
     def test_update_settings_redirects(self, setup_test_data):
         """Test that updating settings redirects to settings page."""
-        handler, response = create_handler('', '',)
+        handler, response = create_handler('/update_settings', 'POST', {'num_courts': '5'})
 
         redirect_location = []
 
@@ -365,11 +376,11 @@ class TestPOSTEndpoints:
 
     def test_update_settings_updates_courts(self, setup_test_data):
         """Test that POST to update_settings actually updates court count."""
-        handler, response = create_handler('', '',)
+        handler, response = create_handler('/update_settings', 'POST', {'num_courts': '5'})
         handler.send_redirect = lambda x: None
         handler.do_POST()
 
-        tournament_data = storage.get_tournament()()()
+        tournament_data = storage.get_tournament()
         assert tournament_data["num_courts"] == 5
 
     def test_generate_schedule_redirects(self, setup_test_data):

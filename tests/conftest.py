@@ -19,9 +19,14 @@ def temp_data_dir(tmp_path):
     temp_dir = tmp_path / "data"
     temp_dir.mkdir()
 
-    # Patch the DATA_DIR in the storage module
-    with patch.object(storage, 'DATA_DIR', temp_dir):
+    # Save original DATA_DIR and patch it
+    original_data_dir = storage.DATA_DIR
+    storage.DATA_DIR = temp_dir
+    try:
         yield temp_dir
+    finally:
+        # Restore original DATA_DIR
+        storage.DATA_DIR = original_data_dir
 
 
 @pytest.fixture
