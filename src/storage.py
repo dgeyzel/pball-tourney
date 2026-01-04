@@ -215,9 +215,19 @@ def add_team(player1_id, player2_id):
 
     Returns:
         The ID assigned to the new team
+
+    Raises:
+        ValueError: If either player is already assigned to another team
     """
     # Get existing teams
     teams = get_teams()
+
+    # Check if either player is already assigned to a team
+    for team in teams:
+        if team["player1"] == player1_id or team["player2"] == player1_id:
+            raise ValueError(f"Player {player1_id} is already assigned to team {team['id']}")
+        if team["player1"] == player2_id or team["player2"] == player2_id:
+            raise ValueError(f"Player {player2_id} is already assigned to team {team['id']}")
 
     # Generate new team ID (simple incrementing ID based on current count)
     team_id = len(teams) + 1

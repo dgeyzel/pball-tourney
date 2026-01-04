@@ -42,7 +42,7 @@ def sample_teams(sample_players):
     return [
         {"id": 1, "player1": 1, "player2": 2},  # Alice & Bob
         {"id": 2, "player1": 3, "player2": 4},  # Charlie & Diana
-        {"id": 3, "player1": 1, "player2": 3},  # Alice & Charlie
+        {"id": 3, "player1": 2, "player2": 5},  # Bob & Eve (changed to avoid duplicate assignments)
     ]
 
 

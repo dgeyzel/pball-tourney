@@ -19,22 +19,23 @@ class TestRoundRobinSchedule:
 
         # One team
         storage.add_player("Player 1")
-        storage.add_team(1, 1)  # Invalid but tests the count check
+        storage.add_player("Player 2")
+        storage.add_team(1, 2)  # Valid team
         tournament.generate_round_robin_schedule()
         matches = storage.get_matches()
-        assert len(matches) == 0
+        assert len(matches) == 0  # Still 0 because we need at least 2 teams for scheduling
 
     def test_generate_schedule_creates_all_pairings(self, temp_data_dir):
         """Test that schedule includes all possible team pairings."""
-        # Create 4 players and 4 teams (each player with every other)
-        for i in range(1, 5):
+        # Create 8 players and 4 teams (each player only in one team)
+        for i in range(1, 9):
             storage.add_player(f"Player {i}")
 
-        # Create 4 teams
+        # Create 4 teams with no overlapping players
         storage.add_team(1, 2)  # Team 1
         storage.add_team(3, 4)  # Team 2
-        storage.add_team(1, 3)  # Team 3
-        storage.add_team(2, 4)  # Team 4
+        storage.add_team(5, 6)  # Team 3
+        storage.add_team(7, 8)  # Team 4
 
         tournament.generate_round_robin_schedule()
 
@@ -62,16 +63,16 @@ class TestRoundRobinSchedule:
     ):
         """Test that matches are distributed across rounds based on court
         capacity."""
-        # Create 6 teams
-        for i in range(1, 7):
+        # Create 12 players for 6 teams (each player only in one team)
+        for i in range(1, 13):
             storage.add_player(f"Player {i}")
 
-        storage.add_team(1, 2)
-        storage.add_team(3, 4)
-        storage.add_team(5, 6)
-        storage.add_team(1, 3)
-        storage.add_team(2, 4)
-        storage.add_team(5, 1)
+        storage.add_team(1, 2)   # Team 1
+        storage.add_team(3, 4)   # Team 2
+        storage.add_team(5, 6)   # Team 3
+        storage.add_team(7, 8)   # Team 4
+        storage.add_team(9, 10)  # Team 5
+        storage.add_team(11, 12) # Team 6
 
         # Set court capacity to 2
         storage.update_tournament_settings(2)
@@ -99,15 +100,15 @@ class TestRoundRobinSchedule:
     ):
         """Test that bye rounds are assigned when there's an odd number of
         teams."""
-        # Create 5 teams (odd number)
-        for i in range(1, 6):
+        # Create 10 players for 5 teams (each player only in one team)
+        for i in range(1, 11):
             storage.add_player(f"Player {i}")
 
-        storage.add_team(1, 2)
-        storage.add_team(3, 4)
-        storage.add_team(5, 1)
-        storage.add_team(2, 3)
-        storage.add_team(4, 5)
+        storage.add_team(1, 2)   # Team 1
+        storage.add_team(3, 4)   # Team 2
+        storage.add_team(5, 6)   # Team 3
+        storage.add_team(7, 8)   # Team 4
+        storage.add_team(9, 10)  # Team 5
 
         tournament.generate_round_robin_schedule()
 
@@ -131,8 +132,10 @@ class TestRoundRobinSchedule:
         """Test that schedule generation updates tournament state."""
         storage.add_player("Player 1")
         storage.add_player("Player 2")
-        storage.add_team(1, 2)
-        storage.add_team(1, 1)  # Second team (invalid but for testing)
+        storage.add_player("Player 3")
+        storage.add_player("Player 4")
+        storage.add_team(1, 2)  # Team 1
+        storage.add_team(3, 4)  # Team 2
 
         tournament.generate_round_robin_schedule()
 
@@ -159,8 +162,10 @@ class TestRoundRobinSchedule:
         # Create teams and generate new schedule
         storage.add_player("Player 1")
         storage.add_player("Player 2")
-        storage.add_team(1, 2)
-        storage.add_team(1, 1)
+        storage.add_player("Player 3")
+        storage.add_player("Player 4")
+        storage.add_team(1, 2)  # Team 1
+        storage.add_team(3, 4)  # Team 2
 
         tournament.generate_round_robin_schedule()
 

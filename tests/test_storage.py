@@ -1,5 +1,6 @@
 """Unit tests for storage.py module."""
 import json
+import pytest
 import src.storage as storage
 
 
@@ -174,18 +175,27 @@ class TestTeamOperations:
 
     def test_add_team_creates_new_team(self, setup_test_data):
         """Test that add_team creates a new team."""
-        team_id = storage.add_team(4, 5)
+        # Players 1-5 are already assigned in sample data
+        # Add new players 6 and 7
+        storage.add_player("Frank")
+        storage.add_player("Grace")
+        team_id = storage.add_team(6, 7)
 
         teams = storage.get_teams()
         assert len(teams) == 4  # 3 from fixture + 1 new
         assert teams[-1]["id"] == team_id
-        assert teams[-1]["player1"] == 4
-        assert teams[-1]["player2"] == 5
+        assert teams[-1]["player1"] == 6
+        assert teams[-1]["player2"] == 7
 
     def test_add_team_increments_id(self, setup_test_data):
         """Test that add_team assigns sequential IDs."""
-        id1 = storage.add_team(4, 5)
-        id2 = storage.add_team(1, 5)
+        # Players 1-5 are already assigned in sample data
+        storage.add_player("Frank")  # Player 6
+        storage.add_player("Grace")  # Player 7
+        storage.add_player("Henry")  # Player 8
+        storage.add_player("Iris")   # Player 9
+        id1 = storage.add_team(6, 7)
+        id2 = storage.add_team(8, 9)
 
         assert id1 == 4  # 3 teams from fixture, so next is 4
         assert id2 == 5
@@ -226,6 +236,35 @@ class TestTeamOperations:
         # Verify by loading again
         loaded = storage.get_teams()
         assert loaded == teams
+
+    def test_add_team_prevents_duplicate_player_assignments(self, temp_data_dir):
+        """Test that add_team raises ValueError when trying to assign a player
+        who is already in another team."""
+        # Create players
+        storage.add_player("Alice")
+        storage.add_player("Bob")
+        storage.add_player("Charlie")
+
+        # Create first team
+        team_id1 = storage.add_team(1, 2)  # Alice & Bob
+        assert team_id1 == 1
+
+        # Try to create second team with Alice (should fail)
+        with pytest.raises(ValueError, match="Player 1 is already assigned"):
+            storage.add_team(1, 3)  # Alice & Charlie
+
+        # Try to create second team with Bob (should fail)
+        with pytest.raises(ValueError, match="Player 2 is already assigned"):
+            storage.add_team(2, 3)  # Bob & Charlie
+
+        # Create valid team with Charlie and new player
+        storage.add_player("Diana")
+        team_id2 = storage.add_team(3, 4)  # Charlie & Diana
+        assert team_id2 == 2
+
+        # Verify only 2 teams exist
+        teams = storage.get_teams()
+        assert len(teams) == 2
 
 
 class TestMatchOperations:
