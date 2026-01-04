@@ -86,7 +86,11 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
             player2_id = int(post_params.get('player2', ['0'])[0])
             # Validate: both players must be selected and different
             if player1_id and player2_id and player1_id != player2_id:
-                storage.add_team(player1_id, player2_id)
+                try:
+                    storage.add_team(player1_id, player2_id)
+                except ValueError:
+                    # Player already assigned to another team - just redirect without creating team
+                    pass
             self.send_redirect('/teams')
 
         elif path == '/remove_team':
