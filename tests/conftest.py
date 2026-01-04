@@ -19,9 +19,14 @@ def temp_data_dir(tmp_path):
     temp_dir = tmp_path / "data"
     temp_dir.mkdir()
 
-    # Patch the DATA_DIR in the storage module
-    with patch.object(storage, 'DATA_DIR', temp_dir):
+    # Save original DATA_DIR and patch it
+    original_data_dir = storage.DATA_DIR
+    storage.DATA_DIR = temp_dir
+    try:
         yield temp_dir
+    finally:
+        # Restore original DATA_DIR
+        storage.DATA_DIR = original_data_dir
 
 
 @pytest.fixture
@@ -42,7 +47,7 @@ def sample_teams(sample_players):
     return [
         {"id": 1, "player1": 1, "player2": 2},  # Alice & Bob
         {"id": 2, "player1": 3, "player2": 4},  # Charlie & Diana
-        {"id": 3, "player1": 1, "player2": 3},  # Alice & Charlie
+        {"id": 3, "player1": 2, "player2": 5},  # Bob & Eve (changed to avoid duplicate assignments)
     ]
 
 
