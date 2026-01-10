@@ -27,3 +27,5 @@
 - All tests go in the `tests/` directory following the project structure
 - Tests should be runnable with the rest of the suite (`run pytest`)
 - Even for quick verification, write it as a real test that provides ongoing value
+- Make sure that all tests are passing after making a change
+- If a problem is found, add a regression test to the test suite to prevent the problem from happening again

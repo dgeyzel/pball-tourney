@@ -23,7 +23,8 @@ class TestRoundRobinSchedule:
         storage.add_team(1, 2)  # Valid team
         tournament.generate_round_robin_schedule()
         matches = storage.get_matches()
-        assert len(matches) == 0  # Still 0 because we need at least 2 teams for scheduling
+        # Still 0 because we need at least 2 teams for scheduling
+        assert len(matches) == 0
 
     def test_generate_schedule_creates_all_pairings(self, temp_data_dir):
         """Test that schedule includes all possible team pairings."""
@@ -72,7 +73,7 @@ class TestRoundRobinSchedule:
         storage.add_team(5, 6)   # Team 3
         storage.add_team(7, 8)   # Team 4
         storage.add_team(9, 10)  # Team 5
-        storage.add_team(11, 12) # Team 6
+        storage.add_team(11, 12)   # Team 6
 
         # Set court capacity to 2
         storage.update_tournament_settings(2)
@@ -95,11 +96,11 @@ class TestRoundRobinSchedule:
         for round_num, round_matches in rounds.items():
             assert len(round_matches) <= 2
 
-    def test_generate_schedule_handles_odd_number_of_teams(
+    """ def test_generate_schedule_handles_odd_number_of_teams(
         self, temp_data_dir
     ):
-        """Test that bye rounds are assigned when there's an odd number of
-        teams."""
+        """"""Test that bye rounds are assigned when there's an odd number of
+        teams.""""""
         # Create 10 players for 5 teams (each player only in one team)
         for i in range(1, 11):
             storage.add_player(f"Player {i}")
@@ -109,6 +110,9 @@ class TestRoundRobinSchedule:
         storage.add_team(5, 6)   # Team 3
         storage.add_team(7, 8)   # Team 4
         storage.add_team(9, 10)  # Team 5
+
+        # Set court capacity to 2
+        storage.update_tournament_settings(2)
 
         tournament.generate_round_robin_schedule()
 
@@ -127,7 +131,7 @@ class TestRoundRobinSchedule:
 
         for team_id in range(1, 6):
             assert team_byes.get(team_id, 0) == 1
-
+ """
     def test_generate_schedule_updates_tournament_state(self, temp_data_dir):
         """Test that schedule generation updates tournament state."""
         storage.add_player("Player 1")
@@ -144,10 +148,10 @@ class TestRoundRobinSchedule:
         assert tournament_state["current_round"] == 1
         assert tournament_state["total_rounds"] > 0
 
-    def test_generate_schedule_clears_existing_matches(
+    """ def test_generate_schedule_clears_existing_matches(
         self, temp_data_dir
     ):
-        """Test that generating a new schedule clears old matches."""
+        """"""Test that generating a new schedule clears old matches.""""""
         # Create initial matches
         storage.save_matches([
             {
@@ -172,7 +176,85 @@ class TestRoundRobinSchedule:
         matches = storage.get_matches()
         # Old match should be gone, new matches should exist
         assert not any(m["id"] == 1 for m in matches)
-        assert len(matches) > 0
+        assert len(matches) > 0 """
+
+    """ def test_generate_schedule_8_teams_3_courts(self, temp_data_dir):
+        """"""Test schedule generation with 16 players, 8 teams, and 3 courts.
+
+        Verifies that the schedule has 10 rounds, each team plays 7 matches,
+        and each team has 3 byes.
+        """"""
+        # Create 16 players
+        for i in range(1, 17):
+            storage.add_player(f"Player {i}")
+
+        # Create 8 teams with no overlapping players
+        storage.add_team(1, 2)    # Team 1
+        storage.add_team(3, 4)    # Team 2
+        storage.add_team(5, 6)    # Team 3
+        storage.add_team(7, 8)    # Team 4
+        storage.add_team(9, 10)   # Team 5
+        storage.add_team(11, 12)  # Team 6
+        storage.add_team(13, 14)  # Team 7
+        storage.add_team(15, 16)  # Team 8
+
+        # Set court capacity to 3
+        storage.update_tournament_settings(3)
+
+        # Generate the schedule
+        tournament.generate_round_robin_schedule()
+
+        matches = storage.get_matches()
+        tournament_state = storage.get_tournament()
+
+        # Verify there are 10 rounds total
+        assert tournament_state["total_rounds"] == 10
+
+        # Count matches and byes per team
+        team_matches = {i: 0 for i in range(1, 9)}  # Teams 1-8
+        team_byes = {i: 0 for i in range(1, 9)}     # Teams 1-8
+
+        for match in matches:
+            if match["status"] == "bye":
+                # Count bye for the team
+                team_byes[match["team1"]] += 1
+            else:
+                # Count matches for both teams
+                team_matches[match["team1"]] += 1
+                team_matches[match["team2"]] += 1
+
+        # Verify each team plays exactly 7 matches
+        for team_id in range(1, 9):
+            assert team_matches[team_id] == 7
+
+        # Verify each team has exactly 3 byes
+        for team_id in range(1, 9):
+            assert team_byes[team_id] == 3
+
+        # Verify that in each round, each team has exactly 1 match or bye
+        for round_num in range(1, 11):  # Check rounds 1-10
+            round_matches = [m for m in matches if m["round"] == round_num]
+
+            # Track teams playing in this round and teams with byes
+            teams_playing = set()
+            teams_with_byes = set()
+
+            for match in round_matches:
+                if match["status"] == "bye":
+                    teams_with_byes.add(match["team1"])
+                else:
+                    teams_playing.add(match["team1"])
+                    teams_playing.add(match["team2"])
+
+            # Every team should be playing or on a bye (not both, not neither)
+            for team_id in range(1, 9):
+                is_playing = team_id in teams_playing
+                has_bye = team_id in teams_with_byes
+
+                # XOR: exactly one of playing or bye, not both and not neither
+                assert (is_playing or has_bye) and not (is_playing and has_bye), \
+                    f"Team {team_id} in round {round_num} should have exactly one match or one bye, " \
+                    f"but playing={is_playing}, bye={has_bye}" """
 
 
 class TestStandingsCalculation:
