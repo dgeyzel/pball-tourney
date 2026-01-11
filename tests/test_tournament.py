@@ -41,7 +41,8 @@ class TestRoundRobinSchedule:
         tournament.generate_round_robin_schedule()
 
         matches = storage.get_matches()
-        # With 4 teams, 1 court, 6 rounds: each round has 1 match + 2 byes = 3 activities
+        # With 4 teams, 1 court, 6 rounds:
+        # Each round has 1 match + 2 byes = 3 activities
         # Total: 6 rounds * 3 activities = 18
         assert len(matches) == 18
 
@@ -147,6 +148,7 @@ class TestRoundRobinSchedule:
 
             # All teams should be active in each round
             assert len(teams_active) == 5
+
     def test_generate_schedule_updates_tournament_state(self, temp_data_dir):
         """Test that schedule generation updates tournament state."""
         storage.add_player("Player 1")
@@ -267,9 +269,14 @@ class TestRoundRobinSchedule:
                 has_bye = team_id in teams_with_byes
 
                 # XOR: exactly one of playing or bye, not both and not neither
-                assert (is_playing or has_bye) and not (is_playing and has_bye), \
-                    f"Team {team_id} in round {round_num} should have exactly one match or one bye, " \
-                    f"but playing={is_playing}, bye={has_bye}"
+                condition = (
+                    (is_playing or has_bye) and not (is_playing and has_bye)
+                )
+                assert condition, (
+                    f"Team {team_id} in round {round_num} should have exactly "
+                    f"one match or one bye, but playing={is_playing}, "
+                    f"bye={has_bye}"
+                )
 
 
 class TestStandingsCalculation:

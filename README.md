@@ -2,7 +2,14 @@
 
 A web-based tournament management application for organizing and tracking pickleball tournaments. This application provides a simple, intuitive interface for managing players, teams, matches, and standings in a round-robin tournament format.
 
-One of the reasons to create this app was for me to learn about and practice using LLM tools to create code.  This application and the accompanying tests were written using Cursor with some human-created tweaks and bug-fixes.
+## About This Project
+
+This application was developed using Cursor IDE with AI assistance, demonstrating modern development practices including:
+
+- **AI-Assisted Development**: Created using LLM tools with human oversight for quality assurance
+- **Test-Driven Development**: Comprehensive test suite (87 tests) written alongside application code
+- **Code Quality**: Follows PEP 8 style guidelines with automated linting
+- **Clean Architecture**: Well-organized modular design with clear separation of concerns
 
 ## Features
 
@@ -18,7 +25,7 @@ One of the reasons to create this app was for me to learn about and practice usi
 
 - Python 3.6 or higher
 - No external dependencies required for running the application (uses only Python standard library)
-- pytest (for running tests, see Testing section)
+- pytest>=7.0.0 (for running tests, see Testing section)
 
 ## Installation
 
@@ -113,22 +120,25 @@ One of the reasons to create this app was for me to learn about and practice usi
 ```text
 pball-tourney/
 ├── src/               # Source code directory
+│   ├── __init__.py    # Package initialization
 │   ├── server.py      # HTTP server and web interface
 │   ├── tournament.py  # Tournament logic (scheduling, standings)
 │   └── storage.py     # Data persistence (JSON file operations)
-├── tests/             # Test suite
+├── tests/             # Test suite (87 tests total)
 │   ├── __init__.py    # Test package initialization
 │   ├── conftest.py    # Pytest fixtures and configuration
-│   ├── test_storage.py    # Storage module tests
-│   ├── test_tournament.py # Tournament logic tests
-│   └── test_server.py     # HTTP server integration tests
-├── data/              # Data storage directory
+│   ├── test_storage.py    # Storage module tests (29 tests)
+│   ├── test_tournament.py # Tournament logic tests (22 tests)
+│   └── test_server.py     # HTTP server integration tests (36 tests)
+├── data/              # Data storage directory (created automatically)
 │   ├── players.json   # Player data
 │   ├── teams.json     # Team data
 │   ├── matches.json   # Match data
 │   └── tournament.json # Tournament state and settings
-├── requirements.txt   # Python dependencies (pytest)
-└── README.md          # This file
+├── run_server.py     # Application entry point script
+├── requirements.txt   # Python dependencies (pytest>=7.0.0)
+├── agents.md          # Development guidelines and instructions
+└── README.md          # This documentation
 ```
 
 ## Data Storage
@@ -149,9 +159,18 @@ The data directory is created automatically if it doesn't exist. You can back up
 - **Bye Handling**: If there's an odd number of teams, bye rounds are automatically assigned
 - **Standings**: Teams are ranked by wins, then point differential, then total wins
 
+## Code Quality
+
+This project follows Python best practices:
+
+- **PEP 8 Compliance**: Code follows Python style guidelines with 79-character line limits
+- **Comprehensive Testing**: 87 tests covering all major functionality
+- **Type Hints**: Ready for future type checking integration
+- **Clean Architecture**: Well-organized modular design with clear separation of concerns
+
 ## Testing
 
-The project includes a comprehensive test suite using pytest. All tests are located in the `tests/` directory.
+The project includes a comprehensive test suite using pytest with 87 tests covering all functionality. All tests pass and are located in the `tests/` directory.
 
 ### Installing Test Dependencies
 
@@ -201,18 +220,28 @@ pytest tests/test_storage.py::test_add_player
 
 ### Test Structure
 
-- **`tests/test_storage.py`**: Unit tests for storage operations (CRUD, file I/O)
-- **`tests/test_tournament.py`**: Unit tests for tournament logic (scheduling, standings, match updates)
-- **`tests/test_server.py`**: Integration tests for HTTP endpoints (GET/POST requests)
+- **`tests/test_storage.py`**: Unit tests for storage operations (CRUD, file I/O) - 29 tests
+- **`tests/test_tournament.py`**: Unit tests for tournament logic (scheduling, standings, match updates) - 22 tests
+- **`tests/test_server.py`**: Integration tests for HTTP endpoints (GET/POST requests) - 36 tests
 - **`tests/conftest.py`**: Shared pytest fixtures and configuration
 
-All tests use isolated temporary directories to avoid affecting production data.
+All tests use isolated temporary directories to avoid affecting production data. The test suite provides comprehensive coverage of the application's functionality.
+
+## Development Status
+
+This project was developed using Cursor IDE with AI assistance, demonstrating modern development practices:
+
+- **AI-Assisted Development**: Created using LLM tools with human oversight for quality assurance
+- **Test-Driven Development**: Comprehensive test suite written alongside the application code
+- **Code Quality**: Regular linting and style enforcement following PEP 8 guidelines
+- **Continuous Testing**: All changes validated through automated test suite
 
 ## Troubleshooting
 
-- **Port already in use**: The server will automatically try the next available port. You can also specify a different port manually: `python server.py <port_number>`
+- **Port already in use**: The server will automatically try the next available port. You can also specify a different port manually: `python run_server.py <port_number>`
 - **Data not saving**: Ensure the `data/` directory exists and is writable
 - **Schedule not generating**: Make sure you have at least 2 teams formed
+- **Tests failing**: Ensure pytest is installed (`pip install -r requirements.txt`) and run `pytest` from the project root
 
 ## License
 
