@@ -5,7 +5,6 @@ This module handles the core tournament logic including:
 - Calculating standings based on match results
 - Managing match results and winners
 """
-import itertools
 from src.storage import (
     get_teams,
     get_matches,
@@ -19,13 +18,15 @@ def generate_round_robin_schedule():
     """Generate a complete round-robin schedule respecting court capacity.
 
     In a round-robin tournament, every team plays every other team once.
-    Matches are distributed across rounds based on the number of available
-    courts, ensuring no more than num_courts matches are scheduled
-    simultaneously.
+    The number of rounds is based on court availability and team count.
+    Each team has exactly one activity (match or bye) per round.
 
-    If there's an odd number of teams, bye rounds are automatically assigned
-    so each team gets exactly one bye.
+    Total matches = ((n^2) - n)/2 where n = number of teams
+    If courts ≤ n/2: rounds = ceil(total_matches / courts)
+    If courts > n/2: rounds = ceil(total_matches / (n/2))
     """
+    import math
+
     # Get current teams and tournament settings
     teams = get_teams()
     tournament = get_tournament()
@@ -37,87 +38,264 @@ def generate_round_robin_schedule():
 
     # Clear existing matches if regenerating schedule
     matches = []
-
-    # Generate all possible team pairings using combinations
-    # itertools.combinations ensures each pair appears exactly once
     team_ids = [team["id"] for team in teams]
-    all_pairings = list(itertools.combinations(team_ids, 2))
+    n = len(team_ids)
 
-    # Distribute pairings across rounds respecting court capacity
-    # Each round can have at most num_courts matches
-    round_num = 1
-    current_round_matches = []  # Track matches in current round
+    # Calculate total matches and rounds
+    total_matches = (n * (n - 1)) // 2
 
-    # Process each team pairing
-    for team1_id, team2_id in all_pairings:
-        # Check if current round is full (reached court capacity)
-        if len(current_round_matches) >= num_courts:
-            # Start a new round
-            round_num += 1
-            current_round_matches = []
+    if num_courts <= n // 2:
+        total_rounds = math.ceil(total_matches / num_courts)
+    else:
+        total_rounds = math.ceil(total_matches / (n // 2))
 
-        # Create match record
-        match = {
-            "id": len(matches) + 1,
-            "round": round_num,
-            "team1": team1_id,
-            "team2": team2_id,
-            "score1": None,
-            "score2": None,
-            "winner": None,
-            "status": "scheduled"
-        }
-        matches.append(match)
-        current_round_matches.append(match)
+    # Create a standard round-robin schedule using the circle method
+    # This ensures all pairings are created without conflicts
+    round_robin_matches = _create_round_robin_circle(team_ids)
 
-    # Handle bye rounds for odd number of teams
-    # In round-robin with odd teams, each team gets exactly one bye
-    # Distribute byes across existing rounds to minimize total rounds
-    if len(teams) % 2 == 1:
-        # Track which teams have already received a bye
-        team_byes = {team_id: False for team_id in team_ids}
+    # Distribute the round-robin matches across tournament rounds
+    teams_in_round = {r: set() for r in range(1, total_rounds + 1)}
 
-        # Distribute byes across rounds, one per round if possible
-        for r in range(1, round_num + 1):
-            # Get all matches in this round
-            round_matches = [m for m in matches if m["round"] == r]
+    # Collect all matches from RR schedule
+    all_rr_matches = []
+    for rr_round_matches in round_robin_matches:
+        for match_pair in rr_round_matches:
+            if len(match_pair) == 2:  # actual match
+                all_rr_matches.append(match_pair)
 
-            # Find which teams are playing in this round
-            teams_playing = set()
-            for m in round_matches:
-                if m["team1"]:
-                    teams_playing.add(m["team1"])
-                if m["team2"]:
-                    teams_playing.add(m["team2"])
+    # Place matches in tournament rounds, ensuring no team conflicts
+    for team1_id, team2_id in all_rr_matches:
+        # Find a round where both teams available and there's court capacity
+        placed = False
+        for tournament_round in range(1, total_rounds + 1):
+            # Check if both teams are available
+            if (team1_id in teams_in_round[tournament_round] or
+                    team2_id in teams_in_round[tournament_round]):
+                continue
 
-            # Find a team that hasn't had a bye and isn't playing this round
-            for team_id in team_ids:
-                if not team_byes[team_id] and team_id not in teams_playing:
-                    # Add bye match for this team in this round
-                    bye_match = {
-                        "id": len(matches) + 1,
-                        "round": r,
-                        "team1": team_id,
-                        "team2": None,
-                        "score1": None,
-                        "score2": None,
-                        "winner": team_id,
-                        "status": "bye"
-                    }
-                    matches.append(bye_match)
-                    team_byes[team_id] = True  # Mark this team as having a bye
-                    break
+            # Check court capacity
+            current_matches = len([
+                m for m in matches
+                if m["round"] == tournament_round and m["status"] != "bye"
+            ])
+            if num_courts <= n // 2:
+                max_matches = num_courts
+            else:
+                max_matches = n // 2
+
+            if current_matches >= max_matches:
+                continue
+
+            # Place the match
+            match = {
+                "id": len(matches) + 1,
+                "round": tournament_round,
+                "team1": team1_id,
+                "team2": team2_id,
+                "score1": None,
+                "score2": None,
+                "winner": None,
+                "status": "scheduled"
+            }
+            matches.append(match)
+            teams_in_round[tournament_round].add(team1_id)
+            teams_in_round[tournament_round].add(team2_id)
+            placed = True
+            break
+
+        assert placed, (
+            f"Could not place match between teams {team1_id} and {team2_id}"
+        )
+
+    # Assign byes to ensure each team has exactly one activity per round
+    for round_num in range(1, total_rounds + 1):
+        teams_with_activity = teams_in_round[round_num]
+        teams_needing_bye = [
+            team_id for team_id in team_ids
+            if team_id not in teams_with_activity
+        ]
+
+        # Assign byes to teams that need them
+        for team_id in teams_needing_bye:
+            bye_match = {
+                "id": len(matches) + 1,
+                "round": round_num,
+                "team1": team_id,
+                "team2": None,
+                "score1": None,
+                "score2": None,
+                "winner": team_id,
+                "status": "bye"
+            }
+            matches.append(bye_match)
+            teams_in_round[round_num].add(team_id)
+
+    # Validate the schedule
+    _validate_schedule(team_ids, matches, total_rounds)
 
     # Save all generated matches to storage
     save_matches(matches)
 
     # Update tournament state to reflect the new schedule
-    # Total rounds is the highest round number used
-    max_round = max([m["round"] for m in matches]) if matches else round_num
-    tournament["total_rounds"] = max_round
+    tournament["total_rounds"] = total_rounds
     tournament["current_round"] = 1              # Start at round 1
     tournament["status"] = "in_progress"         # Tournament is now active
     save_tournament(tournament)
+
+    # Distribute the round-robin matches across tournament rounds
+    # Since RR rounds don't have team conflicts, we can assign them
+    # sequentially to tournament rounds
+    teams_in_round = {r: set() for r in range(1, total_rounds + 1)}
+
+    tournament_round = 1
+    for rr_round_matches in round_robin_matches:
+        # Assign all matches from this RR round to the current tournament round
+        for match_pair in rr_round_matches:
+            if len(match_pair) == 2:  # actual match
+                team1_id, team2_id = match_pair
+
+                # Check court capacity for this tournament round
+                current_matches = len([
+                    m for m in matches
+                    if m["round"] == tournament_round and m["status"] != "bye"
+                ])
+                if num_courts <= n // 2:
+                    max_matches = num_courts
+                else:
+                    max_matches = n // 2
+
+                if current_matches >= max_matches:
+                    # Move to next tournament round
+                    tournament_round += 1
+                    if tournament_round > total_rounds:
+                        tournament_round = 1
+
+                # Place the match
+                match = {
+                    "id": len(matches) + 1,
+                    "round": tournament_round,
+                    "team1": team1_id,
+                    "team2": team2_id,
+                    "score1": None,
+                    "score2": None,
+                    "winner": None,
+                    "status": "scheduled"
+                }
+                matches.append(match)
+                teams_in_round[tournament_round].add(team1_id)
+                teams_in_round[tournament_round].add(team2_id)
+
+        # Move to next tournament round for next RR round
+        tournament_round += 1
+        if tournament_round > total_rounds:
+            tournament_round = 1
+
+    # Assign byes to ensure each team has exactly one activity per round
+    for round_num in range(1, total_rounds + 1):
+        teams_with_activity = teams_in_round[round_num]
+        teams_needing_bye = [
+            team_id for team_id in team_ids
+            if team_id not in teams_with_activity
+        ]
+
+        # Assign byes to teams that need them
+        for team_id in teams_needing_bye:
+            bye_match = {
+                "id": len(matches) + 1,
+                "round": round_num,
+                "team1": team_id,
+                "team2": None,
+                "score1": None,
+                "score2": None,
+                "winner": team_id,
+                "status": "bye"
+            }
+            matches.append(bye_match)
+            teams_in_round[round_num].add(team_id)
+
+
+def _create_round_robin_circle(team_ids):
+    """Create a round-robin schedule using the circle method.
+
+    Returns a list of rounds, where each round is a list of
+    (team1, team2) tuples.
+    For odd number of teams, includes (team, None) for byes.
+    """
+    teams = team_ids.copy()
+    n = len(teams)
+
+    if n % 2 == 1:
+        # Odd number of teams, add a dummy team for byes
+        teams.append(None)
+        n += 1
+
+    rounds = []
+    for _ in range(n - 1):
+        round_matches = []
+        for i in range(n // 2):
+            team1 = teams[i]
+            team2 = teams[n - 1 - i]
+            if team1 is not None and team2 is not None:
+                round_matches.append((min(team1, team2), max(team1, team2)))
+            elif team1 is not None:
+                round_matches.append((team1,))  # bye as single-element tuple
+        rounds.append(round_matches)
+
+        # Rotate teams (keep first team fixed, rotate the rest)
+        teams = [teams[0]] + teams[-1:] + teams[1:-1]
+
+    return rounds
+
+
+def _validate_schedule(team_ids, matches, total_rounds):
+    """Validate that the generated schedule meets all requirements."""
+    n = len(team_ids)
+
+    # Check 1: Total matches should be ((n^2) - n)/2
+    actual_matches = len([m for m in matches if m["status"] != "bye"])
+    expected_matches = (n * (n - 1)) // 2
+    assert actual_matches == expected_matches, (
+        f"Expected {expected_matches} matches, got {actual_matches}"
+    )
+
+    # Check 2: Each team should have exactly one activity per round
+    team_activities_per_round = {
+        team_id: {r: 0 for r in range(1, total_rounds + 1)}
+        for team_id in team_ids
+    }
+
+    for match in matches:
+        round_num = match["round"]
+        if match["status"] == "bye":
+            team_activities_per_round[match["team1"]][round_num] += 1
+        else:
+            team_activities_per_round[match["team1"]][round_num] += 1
+            team_activities_per_round[match["team2"]][round_num] += 1
+
+    for team_id in team_ids:
+        for round_num in range(1, total_rounds + 1):
+            activities = team_activities_per_round[team_id][round_num]
+            assert activities == 1, (
+                f"Team {team_id} has {activities} activities "
+                f"in round {round_num}"
+            )
+
+    # Check 3: Each team pair should play exactly once
+    team_pairings = set()
+    for match in matches:
+        if match["status"] != "bye":
+            pair = tuple(sorted([match["team1"], match["team2"]]))
+            assert pair not in team_pairings, f"Duplicate pairing: {pair}"
+            team_pairings.add(pair)
+
+    expected_pairings = set()
+    for i in range(len(team_ids)):
+        for j in range(i + 1, len(team_ids)):
+            expected_pairings.add((team_ids[i], team_ids[j]))
+
+    assert team_pairings == expected_pairings, (
+        "Not all team pairings are scheduled exactly once"
+    )
 
 
 def calculate_standings():

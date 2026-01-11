@@ -41,8 +41,10 @@ class TestRoundRobinSchedule:
         tournament.generate_round_robin_schedule()
 
         matches = storage.get_matches()
-        # With 4 teams, we should have C(4,2) = 6 matches
-        assert len(matches) == 6
+        # With 4 teams, 1 court, 6 rounds:
+        # Each round has 1 match + 2 byes = 3 activities
+        # Total: 6 rounds * 3 activities = 18
+        assert len(matches) == 18
 
         # Verify all pairings exist
         team_ids = [1, 2, 3, 4]
@@ -96,11 +98,11 @@ class TestRoundRobinSchedule:
         for round_num, round_matches in rounds.items():
             assert len(round_matches) <= 2
 
-    """ def test_generate_schedule_handles_odd_number_of_teams(
+    def test_generate_schedule_handles_odd_number_of_teams(
         self, temp_data_dir
     ):
-        """"""Test that bye rounds are assigned when there's an odd number of
-        teams.""""""
+        """Test that bye rounds are assigned when there's an odd number of
+        teams."""
         # Create 10 players for 5 teams (each player only in one team)
         for i in range(1, 11):
             storage.add_player(f"Player {i}")
@@ -117,6 +119,7 @@ class TestRoundRobinSchedule:
         tournament.generate_round_robin_schedule()
 
         matches = storage.get_matches()
+        tournament_state = storage.get_tournament()
 
         # Count bye matches
         bye_matches = [m for m in matches if m["status"] == "bye"]
@@ -131,7 +134,21 @@ class TestRoundRobinSchedule:
 
         for team_id in range(1, 6):
             assert team_byes.get(team_id, 0) == 1
- """
+
+        # Verify each team has exactly one activity per round
+        for round_num in range(1, tournament_state["total_rounds"] + 1):
+            round_matches = [m for m in matches if m["round"] == round_num]
+            teams_active = set()
+            for match in round_matches:
+                if match["status"] == "bye":
+                    teams_active.add(match["team1"])
+                else:
+                    teams_active.add(match["team1"])
+                    teams_active.add(match["team2"])
+
+            # All teams should be active in each round
+            assert len(teams_active) == 5
+
     def test_generate_schedule_updates_tournament_state(self, temp_data_dir):
         """Test that schedule generation updates tournament state."""
         storage.add_player("Player 1")
@@ -148,10 +165,10 @@ class TestRoundRobinSchedule:
         assert tournament_state["current_round"] == 1
         assert tournament_state["total_rounds"] > 0
 
-    """ def test_generate_schedule_clears_existing_matches(
+    def test_generate_schedule_clears_existing_matches(
         self, temp_data_dir
     ):
-        """"""Test that generating a new schedule clears old matches.""""""
+        """Test that generating a new schedule clears old matches."""
         # Create initial matches
         storage.save_matches([
             {
@@ -174,16 +191,16 @@ class TestRoundRobinSchedule:
         tournament.generate_round_robin_schedule()
 
         matches = storage.get_matches()
-        # Old match should be gone, new matches should exist
-        assert not any(m["id"] == 1 for m in matches)
-        assert len(matches) > 0 """
+        # Old completed match should be gone, new matches should exist
+        assert not any(m.get("status") == "completed" for m in matches)
+        assert len(matches) > 0
 
-    """ def test_generate_schedule_8_teams_3_courts(self, temp_data_dir):
-        """"""Test schedule generation with 16 players, 8 teams, and 3 courts.
+    def test_generate_schedule_8_teams_3_courts(self, temp_data_dir):
+        """Test schedule generation with 16 players, 8 teams, and 3 courts.
 
         Verifies that the schedule has 10 rounds, each team plays 7 matches,
         and each team has 3 byes.
-        """"""
+        """
         # Create 16 players
         for i in range(1, 17):
             storage.add_player(f"Player {i}")
@@ -252,9 +269,14 @@ class TestRoundRobinSchedule:
                 has_bye = team_id in teams_with_byes
 
                 # XOR: exactly one of playing or bye, not both and not neither
-                assert (is_playing or has_bye) and not (is_playing and has_bye), \
-                    f"Team {team_id} in round {round_num} should have exactly one match or one bye, " \
-                    f"but playing={is_playing}, bye={has_bye}" """
+                condition = (
+                    (is_playing or has_bye) and not (is_playing and has_bye)
+                )
+                assert condition, (
+                    f"Team {team_id} in round {round_num} should have exactly "
+                    f"one match or one bye, but playing={is_playing}, "
+                    f"bye={has_bye}"
+                )
 
 
 class TestStandingsCalculation:
