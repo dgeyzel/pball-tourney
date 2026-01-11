@@ -95,6 +95,7 @@ def generate_round_robin_schedule():
                 "score1": None,
                 "score2": None,
                 "winner": None,
+                "result": None,  # 'win', 'loss', or 'tie'
                 "status": "scheduled"
             }
             matches.append(match)
@@ -125,6 +126,7 @@ def generate_round_robin_schedule():
                 "score1": None,
                 "score2": None,
                 "winner": team_id,
+                "result": "bye",  # bye matches have special result
                 "status": "bye"
             }
             matches.append(bye_match)
@@ -208,6 +210,7 @@ def generate_round_robin_schedule():
                 "score1": None,
                 "score2": None,
                 "winner": team_id,
+                "result": "bye",  # bye matches have special result
                 "status": "bye"
             }
             matches.append(bye_match)
@@ -302,9 +305,10 @@ def calculate_standings():
     """Calculate current tournament standings based on completed matches.
 
     Standings are calculated by:
-    1. Counting wins and losses for each team
+    1. Counting wins, losses, and ties for each team
     2. Calculating points for/against and point differential
-    3. Sorting by points, then point differential, then total wins
+    3. Awarding 1 point for wins, 0.5 points for ties
+    4. Sorting by points, then point differential, then total wins
 
     Returns:
         List of standing dictionaries, sorted by rank (best first)
@@ -319,6 +323,7 @@ def calculate_standings():
         team_id = team["id"]
         wins = 0
         losses = 0
+        ties = 0
         points_for = 0      # Total points scored by this team
         points_against = 0  # Total points scored against this team
 
@@ -349,7 +354,9 @@ def calculate_standings():
                 # This team is team1, so score1 is their score
                 points_for += score1
                 points_against += score2
-                if match["winner"] == team_id:
+                if match.get("result") == "tie":
+                    ties += 1
+                elif match["winner"] == team_id:
                     wins += 1
                 else:
                     losses += 1
@@ -357,20 +364,23 @@ def calculate_standings():
                 # This team is team2, so score2 is their score
                 points_for += score2
                 points_against += score1
-                if match["winner"] == team_id:
+                if match.get("result") == "tie":
+                    ties += 1
+                elif match["winner"] == team_id:
                     wins += 1
                 else:
                     losses += 1
 
         # Calculate point differential (used for tie-breaking)
         point_differential = points_for - points_against
-        points = wins  # Simple scoring: 1 point per win, 0 per loss
+        points = wins + (ties * 0.5)  # 1 point per win, 0.5 points per tie
 
         # Add this team's standing to the list
         standings.append({
             "team_id": team_id,
             "wins": wins,
             "losses": losses,
+            "ties": ties,
             "points": points,
             "points_for": points_for,
             "points_against": points_against,
@@ -448,8 +458,8 @@ def update_match_result(match_id, score1, score2):
         score1: Score for team1
         score2: Score for team2
 
-    The winner is determined by the higher score. The match status
-    is updated to "completed" after scores are entered.
+    The winner is determined by the higher score. Ties are also supported.
+    The match status is updated to "completed" after scores are entered.
     """
     matches = get_matches()
 
@@ -460,14 +470,17 @@ def update_match_result(match_id, score1, score2):
             match["score1"] = score1
             match["score2"] = score2
 
-            # Determine winner based on scores (higher score wins)
+            # Determine winner and result based on scores (higher score wins)
             if score1 > score2:
                 match["winner"] = match["team1"]
+                match["result"] = "win"  # team1 won
             elif score2 > score1:
                 match["winner"] = match["team2"]
+                match["result"] = "win"  # team2 won
             else:
-                # Tie - no winner assigned (could be handled differently)
+                # Tie - no winner assigned, but mark as tie
                 match["winner"] = None
+                match["result"] = "tie"
 
             # Mark match as completed
             match["status"] = "completed"

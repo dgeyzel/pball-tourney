@@ -292,6 +292,7 @@ class TestStandingsCalculation:
         assert len(standings) == 1  # One team
         assert standings[0]["wins"] == 0
         assert standings[0]["losses"] == 0
+        assert standings[0]["ties"] == 0
 
     def test_calculate_standings_counts_wins_and_losses(self, setup_test_data):
         """Test that standings correctly count wins and losses."""
@@ -410,6 +411,7 @@ class TestStandingsCalculation:
         # Bye should not count as a win
         assert team_standing["wins"] == 0
         assert team_standing["losses"] == 0
+        assert team_standing["ties"] == 0
 
     def test_calculate_standings_sorts_correctly(
         self, temp_data_dir
@@ -453,6 +455,45 @@ class TestStandingsCalculation:
         assert standings[0]["team_id"] == 1
         assert standings[0]["wins"] == 2
         assert standings[1]["wins"] == 0
+
+    def test_calculate_standings_handles_ties(self, temp_data_dir):
+        """Test that standings correctly handle tied matches."""
+        # Setup teams
+        storage.add_player("Player 1")
+        storage.add_player("Player 2")
+        storage.add_player("Player 3")
+        storage.add_player("Player 4")
+        storage.add_team(1, 2)  # Team 1
+        storage.add_team(3, 4)  # Team 2
+
+        # Create a tied match
+        storage.save_matches([{
+            "id": 1,
+            "round": 1,
+            "team1": 1,
+            "team2": 2,
+            "score1": 11,
+            "score2": 11,
+            "winner": None,
+            "result": "tie",
+            "status": "completed"
+        }])
+
+        standings = tournament.calculate_standings()
+
+        # Both teams should have 1 tie and 0.5 points each
+        team1_standing = next(s for s in standings if s["team_id"] == 1)
+        team2_standing = next(s for s in standings if s["team_id"] == 2)
+
+        assert team1_standing["ties"] == 1
+        assert team1_standing["wins"] == 0
+        assert team1_standing["losses"] == 0
+        assert team1_standing["points"] == 0.5
+
+        assert team2_standing["ties"] == 1
+        assert team2_standing["wins"] == 0
+        assert team2_standing["losses"] == 0
+        assert team2_standing["points"] == 0.5
 
 
 class TestMatchResults:
@@ -518,7 +559,7 @@ class TestMatchResults:
             assert updated_match["winner"] == scheduled_match["team2"]
 
     def test_update_match_result_handles_tie(self, setup_test_data):
-        """Test that update_match_result handles ties (no winner)."""
+        """Test that update_match_result handles ties."""
         matches = storage.get_matches()
         scheduled_match = next(
             (m for m in matches if m["status"] == "scheduled"), None
@@ -533,6 +574,7 @@ class TestMatchResults:
             )
 
             assert updated_match["winner"] is None
+            assert updated_match["result"] == "tie"
             assert updated_match["status"] == "completed"
 
 

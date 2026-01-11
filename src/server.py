@@ -425,14 +425,20 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
                     </tr>
                     """
                 elif match["status"] == "completed":
-                    # Completed match - show scores and winner indicator (★)
-                    winner_indicator = "★" if match["winner"] == match["team1"] else ""
-                    winner_indicator2 = "★" if match["winner"] == match["team2"] else ""
+                    # Completed match - show scores and winner indicator (★) or TIE
+                    if match.get("result") == "tie":
+                        result_display = "TIE"
+                        winner_indicator = ""
+                        winner_indicator2 = ""
+                    else:
+                        winner_indicator = "★" if match["winner"] == match["team1"] else ""
+                        winner_indicator2 = "★" if match["winner"] == match["team2"] else ""
+                        result_display = f"{match.get('score1', 0)} - {match.get('score2', 0)}"
                     matches_html += f"""
                     <tr class="completed-match">
                         <td>{team1_name} {winner_indicator}</td>
                         <td>{team2_name} {winner_indicator2}</td>
-                        <td>{match.get('score1', 0)} - {match.get('score2', 0)}</td>
+                        <td>{result_display}</td>
                     </tr>
                     """
                 else:
@@ -512,6 +518,7 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
                 <td>{team_name}</td>
                 <td>{standing['wins']}</td>
                 <td>{standing['losses']}</td>
+                <td>{standing['ties']}</td>
                 <td>{standing['points']}</td>
                 <td>{standing['points_for']}</td>
                 <td>{standing['points_against']}</td>
@@ -541,6 +548,7 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
                             <th>Team</th>
                             <th>Wins</th>
                             <th>Losses</th>
+                            <th>Ties</th>
                             <th>Points</th>
                             <th>Points For</th>
                             <th>Points Against</th>
@@ -548,7 +556,7 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
                         </tr>
                     </thead>
                     <tbody>
-                        {standings_html if standings_html else '<tr><td colspan="8">No matches completed yet.</td></tr>'}
+                        {standings_html if standings_html else '<tr><td colspan="9">No matches completed yet.</td></tr>'}
                     </tbody>
                 </table>
             </div>
@@ -560,7 +568,7 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
         """Render a compact standings table for a subset of teams.
 
         Used on the index page to show top teams. Displays abbreviated
-        statistics (wins, losses, points only).
+        statistics (wins, losses, ties, points).
 
         Args:
             standings: List of standing dictionaries (can be a subset)
@@ -572,10 +580,10 @@ class TournamentHandler(http.server.SimpleHTTPRequestHandler):
             return "<p>No standings yet.</p>"
 
         # Build compact table with abbreviated headers
-        html = "<table class='data-table'><thead><tr><th>Team</th><th>W</th><th>L</th><th>Pts</th></tr></thead><tbody>"
+        html = "<table class='data-table'><thead><tr><th>Team</th><th>W</th><th>L</th><th>T</th><th>Pts</th></tr></thead><tbody>"
         for standing in standings:
             team_name = tournament.get_team_name(standing["team_id"])
-            html += f"<tr><td>{team_name}</td><td>{standing['wins']}</td><td>{standing['losses']}</td><td>{standing['points']}</td></tr>"
+            html += f"<tr><td>{team_name}</td><td>{standing['wins']}</td><td>{standing['losses']}</td><td>{standing['ties']}</td><td>{standing['points']}</td></tr>"
         html += "</tbody></table>"
         return html
 
