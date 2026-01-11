@@ -250,11 +250,11 @@ class TestTeamOperations:
         assert team_id1 == 1
 
         # Try to create second team with Alice (should fail)
-        with pytest.raises(ValueError, match="Player 1 is already assigned"):
+        with pytest.raises(ValueError, match="Player 1 in team 1"):
             storage.add_team(1, 3)  # Alice & Charlie
 
         # Try to create second team with Bob (should fail)
-        with pytest.raises(ValueError, match="Player 2 is already assigned"):
+        with pytest.raises(ValueError, match="Player 2 in team 1"):
             storage.add_team(2, 3)  # Bob & Charlie
 
         # Create valid team with Charlie and new player
