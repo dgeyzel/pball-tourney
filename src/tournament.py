@@ -489,6 +489,23 @@ def update_match_result(match_id, score1, score2):
     # Save updated matches to storage
     save_matches(matches)
 
+    # Check if tournament is now completed
+    if _all_matches_completed():
+        tournament = get_tournament()
+        if tournament["status"] == "in_progress":
+            tournament["status"] = "completed"
+            save_tournament(tournament)
+
+
+def _all_matches_completed():
+    """Check if all scheduled matches have been completed.
+
+    Returns:
+        True if all matches are either completed or bye, False otherwise
+    """
+    matches = get_matches()
+    return all(match["status"] in ["completed", "bye"] for match in matches)
+
 
 def get_matches_by_round(round_num):
     """Get all matches for a specific round.

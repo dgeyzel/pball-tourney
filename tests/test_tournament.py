@@ -577,6 +577,33 @@ class TestMatchResults:
             assert updated_match["result"] == "tie"
             assert updated_match["status"] == "completed"
 
+    def test_tournament_completes_when_all_matches_done(self, setup_test_data):
+        """Test tournament completion when all matches are done."""
+        # Ensure tournament is in progress
+        tournament_state = storage.get_tournament()
+        tournament_state["status"] = "in_progress"
+        storage.save_tournament(tournament_state)
+
+        # Get all scheduled matches and complete them one by one
+        matches = storage.get_matches()
+        scheduled_matches = [m for m in matches if m["status"] == "scheduled"]
+
+        # Complete all but the last match
+        for i, match in enumerate(scheduled_matches[:-1]):
+            tournament.update_match_result(match["id"], 11, i)  # vary scores
+
+        # Tournament should still be in progress
+        tournament_state = storage.get_tournament()
+        assert tournament_state["status"] == "in_progress"
+
+        # Complete the final match
+        final_match = scheduled_matches[-1]
+        tournament.update_match_result(final_match["id"], 11, 9)
+
+        # Tournament should now be completed
+        tournament_state = storage.get_tournament()
+        assert tournament_state["status"] == "completed"
+
 
 class TestHelperFunctions:
     """Tests for helper functions."""
